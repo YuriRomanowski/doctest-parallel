@@ -74,7 +74,8 @@ instance Semigroup Summary where
 -- | Run all examples from a list of modules.
 runModules
   :: (?verbosity::LogLevel)
-  => ModuleConfig
+  => Maybe FilePath
+  -> ModuleConfig
   -- ^ Configuration options specific to module
   -> Maybe Int
   -- ^ Number of threads to use. Defaults to 'getNumProcessors'.
@@ -85,7 +86,7 @@ runModules
   -> [Module [Located DocTest]]
   -- ^ Modules under test
   -> IO Summary
-runModules modConfig nThreads implicitPrelude args modules = do
+runModules mbGhcPath modConfig nThreads implicitPrelude args modules = do
   isInteractive <- hIsTerminalDevice stderr
 
   -- Start a thread pool. It sends status updates to this thread through 'output'.
@@ -93,7 +94,7 @@ runModules modConfig nThreads implicitPrelude args modules = do
   (input, output) <-
     makeThreadPool
       (fromMaybe nCores nThreads)
-      (runModule modConfig implicitPrelude args)
+      (runModule mbGhcPath modConfig implicitPrelude args)
 
   -- Send instructions to threads
   liftIO (mapM_ (writeChan input) modules)
@@ -193,13 +194,14 @@ shuffle seed xs =
 
 -- | Run all examples from given module.
 runModule
-  :: ModuleConfig
+  :: Maybe FilePath
+  -> ModuleConfig
   -> Bool
   -> [String]
   -> Chan (ThreadId, ReportUpdate)
   -> Module [Located DocTest]
   -> IO ()
-runModule modConfig0 implicitPrelude ghciArgs output mod_ = do
+runModule mbGhcPath modConfig0 implicitPrelude ghciArgs output mod_ = do
   threadId <- myThreadId
   let update r = writeChan output (threadId, r)
 
@@ -241,7 +243,7 @@ runModule modConfig0 implicitPrelude ghciArgs output mod_ = do
 
 
       let logger = update . UpdateLog Debug
-      Interpreter.withInterpreter logger ghciArgs $ \repl -> withCP65001 $ do
+      Interpreter.withInterpreter mbGhcPath logger ghciArgs $ \repl -> withCP65001 $ do
         -- Try to import this module, if it fails, something is off
         importResult <-
           case importModule of

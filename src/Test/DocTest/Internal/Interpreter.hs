@@ -22,6 +22,7 @@ import GHC.Paths (ghc)
 
 import Test.DocTest.Internal.GhciWrapper
 import Test.DocTest.Internal.Logging (DebugLogger)
+import Data.Maybe (fromMaybe)
 
 -- $setup
 -- >>> import Test.DocTest.Internal.GhciWrapper (eval)
@@ -50,11 +51,12 @@ interpreterSupported = do
 -- >>> withInterpreter noLogger [] $ \i -> eval i "23 + 42"
 -- "65\n"
 withInterpreter
-  :: DebugLogger            -- ^ Debug logger
+  :: Maybe FilePath
+  -> DebugLogger            -- ^ Debug logger
   -> [String]               -- ^ List of flags, passed to GHC
   -> (Interpreter -> IO a)  -- ^ Action to run
   -> IO a                   -- ^ Result of action
-withInterpreter logger flags action = do
+withInterpreter mbGhcPath logger flags action = do
   let
     args = flags ++ [
         "--interactive"
@@ -63,7 +65,7 @@ withInterpreter logger flags action = do
       , "-fno-diagnostics-show-caret"
 #endif
       ]
-  bracket (new logger defaultConfig{configGhci = ghc} args) close action
+  bracket (new logger defaultConfig{configGhci = fromMaybe ghc mbGhcPath} args) close action
 
 -- | Evaluate an expression; return a Left value on exceptions.
 --

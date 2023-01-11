@@ -105,6 +105,7 @@ data Config = Config
   , cfgNix :: Bool
   -- ^ Detect Nix build environment and try to make GHC aware of the local package
   -- being tested.
+  , cfgGhcPath :: Maybe FilePath
   } deriving (Show, Eq, Generic, NFData)
 
 data ModuleConfig = ModuleConfig
@@ -136,6 +137,7 @@ defaultConfig = Config
   , cfgLogLevel = Info
   , cfgModuleConfig = defaultModuleConfig
   , cfgNix = True
+  , cfgGhcPath = Nothing
   }
 
 parseLocatedModuleOptions ::
@@ -177,6 +179,7 @@ parseOptions = go defaultConfig
       "--debug" -> go config{cfgLogLevel=Debug} args
       "--nix" -> go config{cfgNix=True} args
       "--no-nix" -> go config{cfgNix=False} args
+      '-' : '-' : 'g' : 'h' : 'c' : path -> go config{cfgGhcPath=Just path} args
       ('-':_) | Just n <- parseThreads arg -> go config{cfgThreads=Just n} args
       ('-':_) | Just l <- parseLogLevel arg -> go config{cfgLogLevel=l} args
       ('-':_)

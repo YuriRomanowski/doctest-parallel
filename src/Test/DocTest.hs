@@ -157,4 +157,4 @@ run lib Config{..} = do
     filteredModules = filterModules cfgModules allModules
     filteredModulesMsg = intercalate ", " (map moduleName filteredModules)
   Logging.log Debug ("Running examples in modules: " <> filteredModulesMsg)
-  runModules modConfig cfgThreads implicitPrelude evalGhciArgs filteredModules
+  runModules cfgGhcPath modConfig cfgThreads implicitPrelude evalGhciArgs filteredModules
